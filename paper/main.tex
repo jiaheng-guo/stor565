@@ -1,0 +1,144 @@
+\documentclass{article}
+\usepackage[legalpaper, margin=1in]{geometry}
+
+\usepackage{amsmath,amsfonts,amssymb,graphicx,fancyhdr,latexsym,float,amsthm,bm,graphicx,mathtools,txfonts,enumitem,listings,verbatim,color}
+\usepackage{epsfig}
+\usepackage[ruled,vlined, linesnumbered]{algorithm2e}
+\usepackage{hyperref}       % hyperlinks
+\hypersetup{
+    colorlinks=true,
+    linkcolor=red,
+    citecolor=blue,
+    urlcolor=cyan,
+}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\bS}{\mathcal{S}}
+
+\DeclareMathOperator{\tr}{tr}
+
+
+
+\pagestyle{fancy}
+\lhead{STOR 566 Final Project Proposal}
+\rhead{\textit{Group $\#13$}}
+
+\title{A Comparative Study of Classical and Modern Boosting Algorithms for Supervised Learning}
+\author{Tony Luo,\; Will Kim,\; Sichen Li,\; Shang Peng,\; Jiaheng Guo}
+\date{} %Please don't insert a date
+
+\begin{document}
+\maketitle
+
+\textit{\textcolor{red}{Hi team, I am using the template provided by Prof. Zhong. We can for now ignore the references in .bib file and focus on this single .tex file for synchronization.}
+}
+\section{Introduction}
+
+Briefly describe the problem you are addressing, why it matters, and what gap your work aims to fill.
+
+\section{Related Works}
+
+Review of existing studies in related fields.
+
+\section{Methodology}
+
+\textit{\textcolor{red}{Please be aware that the paper structure Prof. Zhong provided in this template (Section 2 Related Works, Section 3 Methodology) is different from what we proposed in the group chat. Please move the mathematics explanations to Section 3, and reserve Section 2 for literature review, which covers the historical development of boosting algorithms, their applications, and comparisons in previous studies, with minimal mathematical details.}}
+
+Describe the models, techniques, or algorithms you developed or compared. 
+
+
+\section{Experiments Results}
+\label{sec:experiment}
+
+This section describes the experimental setup used to compare AdaBoost, GBM, XGBoost, and LightGBM. All models were evaluated under a unified and reproducible framework with consistent preprocessing, hyperparameter tuning, and cross-validation procedures.
+
+\subsection{Datasets and Preprocessing}
+We evaluate the four boosting algorithms on several publicly available datasets from \textit{Kaggle} and \textit{UCI Machine Learning Repository} spanning both classification and regression tasks across various domains. Table \ref{tab:clf_ds} and \ref{tab:reg_ds} summary the characteristics of the datasets we used.
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        \textbf{dataset} & \textbf{\#samples} & \textbf{\#features} & \textbf{\#classes} & \textbf{type} & \textbf{link} \\
+        \hline
+        Adult Income & 48,842 & 14 & 2 & Finance & \href{https://archive.ics.uci.edu/ml/datasets/adult}{Kaggle} \\
+        \hline
+        Heart Disease & 303 & 13 & 2 & Medical & \href{https://archive.ics.uci.edu/dataset/45/heart+disease}{UCI} \\
+        \hline
+        Mushrooms & 8,124 & 22 & 2 & Medical & \href{https://www.kaggle.com/datasets/uciml/mushroom-classification}{Kaggle} \\
+        \hline
+        Telco Customer Churn & 7,043 & 33 & 2 & Commercial & \href{https://www.kaggle.com/datasets/yeanzc/telco-customer-churn-ibm-dataset}{Kaggle} \\
+        \hline
+        Breast Cancer & 569 & 30 & 2 & Medical & \href{https://www.kaggle.com/datasets/uciml/breast-cancer-wisconsin-data}{Kaggle} \\
+        \hline
+        Credit Card Fraud & 284,807 & 30 & 2 & Finance & \href{https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud}{Kaggle} \\
+        \hline
+        IMDB Movie Reviews & 50,000 & 1 & 2 & NLP & \href{https://www.kaggle.com/datasets/lakshmi25npathi/imdb-dataset-of-50k-movie-reviews}{Kaggle} \\
+        \hline
+    \end{tabular}
+    \caption{Characteristics of the Classification Datasets Used}
+    \label{tab:clf_ds}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \textbf{dataset} & \textbf{\#samples} & \textbf{\#features} & \textbf{type} & \textbf{link} \\
+        \hline
+        California Housing & 20\,640 & 8 & housing & \href{https://www.kaggle.com/datasets/camnugent/california-housing-prices}{Kaggle} \\
+        \hline
+        Ames House Prices & 1\,460 & 80 & housing & \href{https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data}{Kaggle} \\
+        \hline
+        Wine Quality & 4\,898 & 11 & chemistry & \href{https://archive.ics.uci.edu/ml/datasets/wine+quality}{UCI} \\
+        \hline
+        Boston Housing & 506 & 13 & housing & \href{https://archive.ics.uci.edu/ml/datasets/housing}{UCI} \\
+        \hline
+    \end{tabular}
+    \caption{Characteristics of the Regression Datasets Used}
+    \label{tab:reg_ds}
+\end{table}
+
+All datasets were processed through a shared pipeline:
+\begin{enumerate}
+    \item[(1)] Missing numerical features were imputed using medians; categorical features were imputed using the most frequent category.
+    \item[(2)] Categorical variables were one-hot encoded for AdaBoost, GBM, and XGBoost, while LightGBM additionally took advantage of its built-in categorical support.
+    \item[(3)] Numerical features were left unscaled, consistent with tree-based model characteristics.
+    \item[(4)] Training and testing splits were generated using fixed random seeds to ensure reproducibility across models.
+\end{enumerate}
+
+\subsection{Training and Model Selection}
+All datasets follows a 80/20 train-test split. For hyperparameter optimization, we performed hyperparameter optimization for each algorithm using grid search and randomized search to tune maximum depth, number of estimators, and learning rate. For classification problems, logistic or exponential losses were used as appropriate, and for regression tasks, squared-error loss was applied. Nested $k$-fold cross-validation with $k=10$ was used to avoid information leakage and produce robust performance estimates.
+
+\subsection{Evaluation Metrics}
+
+\paragraph{Classification Metrics.}
+Accuracy, precision, recall, F1-score, and ROC--AUC were used.
+
+\paragraph{Regression Metrics.}
+RMSE, MAE, and $R^2$ were used.
+
+\subsection{Comparative Analysis}
+The empirical analysis examines:
+\begin{itemize}
+    \item \textbf{Predictive performance:} measurable improvements over classical methods.
+    \item \textbf{Model complexity and overfitting:} effects of depth, shrinkage, and regularization.
+    \item \textbf{Computational efficiency:} impact of parallelization, histogram-based training, and sampling strategies.
+    \item \textbf{Feature importance stability:} consistency of learned feature rankings across folds and algorithms.
+    \item \textbf{Scalability:} relative performance on larger datasets, highlighting differences in system design.
+\end{itemize}
+
+These analyses provide a comprehensive comparison of classical and modern boosting techniques, highlighting both algorithmic trade-offs and practical considerations.
+
+
+\section{Conclusion and Future Direction}
+
+Summarize key findings, limitations, and next steps. Propose meaningful future improvements or extensions that follow logically from your results.
+
+\cite{freund1997decision} % temporary citation to test bibliography, delete later
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}
