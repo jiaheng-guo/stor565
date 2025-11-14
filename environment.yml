@@ -1,4 +1,4 @@
-name: course
+name: stor565
 channels:
   - conda-forge
   - defaults
