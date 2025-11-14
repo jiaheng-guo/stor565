@@ -40,7 +40,7 @@ def run_all_datasets(
 
 if __name__ == "__main__":
     df, reports = run_all_datasets()
-    df.to_csv("outputs/results.csv", index=False)
-    with open("outputs/reports.txt", "w") as fh:
+    df.to_csv("static/results.csv", index=False)
+    with open("static/reports.txt", "w") as fh:
         for key, rep in reports.items():
             fh.write(f"{key}\n{'=' * 40}\n{rep}\n\n")
