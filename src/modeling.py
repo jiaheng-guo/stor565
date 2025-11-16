@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Dict, List
 
 import numpy as np
@@ -14,22 +12,8 @@ from sklearn.ensemble import (
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-
-try:
-    from xgboost import XGBClassifier, XGBRegressor
-
-    XGBOOST_AVAILABLE = True
-except ImportError:  # pragma: no cover - handled at runtime
-    XGBClassifier = XGBRegressor = None
-    XGBOOST_AVAILABLE = False
-
-try:
-    from lightgbm import LGBMClassifier, LGBMRegressor
-
-    LIGHTGBM_AVAILABLE = True
-except ImportError:  # pragma: no cover - handled at runtime
-    LGBMClassifier = LGBMRegressor = None
-    LIGHTGBM_AVAILABLE = False
+from xgboost import XGBClassifier, XGBRegressor
+from lightgbm import LGBMClassifier, LGBMRegressor
 
 
 BOOSTING_ALGOS: List[str] = ["adaboost", "gbm", "xgboost", "lightgbm"]
@@ -46,8 +30,6 @@ def _build_model(task: str, algorithm: str, random_state: int):
             return GradientBoostingClassifier(random_state=random_state)
         return GradientBoostingRegressor(random_state=random_state)
     if algorithm == "xgboost":
-        if not XGBOOST_AVAILABLE:
-            raise ImportError("Install the `xgboost` package to run XGBoost models.")
         if task == "classification":
             return XGBClassifier(
                 n_estimators=600,
@@ -72,8 +54,6 @@ def _build_model(task: str, algorithm: str, random_state: int):
             n_jobs=-1,
         )
     if algorithm == "lightgbm":
-        if not LIGHTGBM_AVAILABLE:
-            raise ImportError("Install the `lightgbm` package to run LightGBM models.")
         if task == "classification":
             return LGBMClassifier(
                 n_estimators=600,
@@ -110,7 +90,7 @@ def build_model_pipeline(
         numeric_transformer = Pipeline(
             steps=[
                 ("imputer", SimpleImputer(strategy="median")),
-                ("scaler", StandardScaler()),
+                ("scaler", StandardScaler(with_mean=False)),
             ]
         )
         transformers.append(("num", numeric_transformer, numeric_features))
