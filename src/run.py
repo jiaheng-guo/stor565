@@ -4,9 +4,21 @@ from typing import Dict, Tuple
 import pandas as pd
 from tqdm import tqdm
 
-from .preprocess import CLASSIFICATION_DATASETS, DatasetConfig
 from .evaluation import BOOSTING_ALGOS, evaluate_dataset
-from .utils import plot_accuracy, plot_f1_score, plot_roc_auc, plot_training_time
+from .preprocess import (
+    CLASSIFICATION_DATASETS,
+    REGRESSION_DATASETS,
+    DatasetConfig,
+)
+from .utils import (
+    plot_accuracy,
+    plot_f1_score,
+    plot_mae,
+    plot_r2,
+    plot_rmse,
+    plot_roc_auc,
+    plot_training_time,
+)
 
 
 def run_clf_datasets(
@@ -22,7 +34,7 @@ def run_clf_datasets(
     fold_rows = []
 
     for algorithm in BOOSTING_ALGOS:
-        for cfg in tqdm(datasets, desc=f"Evaluating datasets with {algorithm}"):
+        for cfg in tqdm(datasets, desc=f"Evaluating classification datasets with {algorithm}"):
             result, report, folds = evaluate_dataset(cfg, algorithm)
             results.append(result)
             reports[f"{cfg.key}_{algorithm}"] = report
@@ -39,21 +51,58 @@ def run_clf_datasets(
             plot_training_time(results_df, time_path)
     return results_df, reports, fold_df
 
-def run_reg_datasets():
-    pass 
+
+def run_reg_datasets(
+    datasets: Tuple[DatasetConfig, ...] = tuple(REGRESSION_DATASETS),
+    make_plot: bool = True,
+    time_path: Path | None = None,
+    rmse_path: Path | None = None,
+    mae_path: Path | None = None,
+    r2_path: Path | None = None,
+) -> Tuple[pd.DataFrame, Dict[str, str]]:
+    results = []
+    reports: Dict[str, str] = {}
+
+    for algorithm in BOOSTING_ALGOS:
+        for cfg in tqdm(datasets, desc=f"Evaluating regression datasets with {algorithm}"):
+            result, report, _ = evaluate_dataset(cfg, algorithm)
+            results.append(result)
+            reports[f"{cfg.key}_{algorithm}"] = report
+
+    results_df = pd.DataFrame(results)
+    if make_plot and not results_df.empty:
+        plot_training_time(results_df, time_path)
+        plot_rmse(results_df, rmse_path)
+        plot_mae(results_df, mae_path)
+        plot_r2(results_df, r2_path)
+    return results_df, reports
+
 
 if __name__ == "__main__":
     static_dir = Path("static")
     static_dir.mkdir(parents=True, exist_ok=True)
 
-    df, reports, fold_df = run_clf_datasets(
-        auc_path=static_dir / "auroc.png",
-        acc_path=static_dir / "accuracy.png",
-        f1_path=static_dir / "f1_score.png",
-        time_path=static_dir / "training_time.png",
+    # clf_df, clf_reports, fold_df = run_clf_datasets(
+    #     auc_path=static_dir / "auroc.png",
+    #     acc_path=static_dir / "accuracy.png",
+    #     f1_path=static_dir / "f1_score.png",
+    #     time_path=static_dir / "clf_training_time.png",
+    # )
+    # clf_df.to_csv(static_dir / "clf_results.csv", index=False)
+    # fold_df.to_csv(static_dir / "clf_fold_metrics.csv", index=False)
+
+    # with open(static_dir / "clf_reports.txt", "w") as fh:
+        # for key, rep in clf_reports.items():
+            # fh.write(f"{key}\n{'=' * 40}\n{rep}\n\n")
+
+    reg_df, reg_reports = run_reg_datasets(
+        time_path=static_dir / "reg_training_time.png",
+        rmse_path=static_dir / "rmse.png",
+        mae_path=static_dir / "mae.png",
+        r2_path=static_dir / "r2.png",
     )
-    df.to_csv(static_dir / "results.csv", index=False)
-    fold_df.to_csv(static_dir / "fold_roc_auc.csv", index=False)
-    with open(static_dir / "reports.txt", "w") as fh:
-        for key, rep in reports.items():
+    reg_df.to_csv(static_dir / "reg_results.csv", index=False)
+
+    with open(static_dir / "reg_reports.txt", "w") as fh:
+        for key, rep in reg_reports.items():
             fh.write(f"{key}\n{'=' * 40}\n{rep}\n\n")

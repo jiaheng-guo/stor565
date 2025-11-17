@@ -71,3 +71,38 @@ def plot_training_time(results_df: pd.DataFrame, output_path: Optional[Path] = N
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path, dpi=300)
     plt.close()
+
+
+def _plot_regression_metric(
+    results_df: pd.DataFrame,
+    metric: str,
+    output_path: Optional[Path],
+    title: str,
+    higher_is_better: bool = True,
+) -> None:
+    if metric not in results_df:
+        raise ValueError(f"No {metric} column found in regression results.")
+    plt.figure(figsize=(12, 6))
+    sns.barplot(data=results_df, x="dataset", y=metric, hue="model", palette="Set2")
+    plt.ylabel(metric.upper())
+    plt.xlabel("Dataset")
+    plt.xticks(rotation=30, ha="right")
+    note = "(higher is better)" if higher_is_better else "(lower is better)"
+    plt.title(f"{title} per Dataset and Model {note}")
+    plt.tight_layout()
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(output_path, dpi=300)
+    plt.close()
+
+
+def plot_rmse(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_metric(results_df, "test_rmse", output_path, "RMSE", higher_is_better=False)
+
+
+def plot_mae(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_metric(results_df, "test_mae", output_path, "MAE", higher_is_better=False)
+
+
+def plot_r2(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_metric(results_df, "test_r2", output_path, "R²", higher_is_better=True)
