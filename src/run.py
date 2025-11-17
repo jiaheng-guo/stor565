@@ -59,23 +59,27 @@ def run_reg_datasets(
     rmse_path: Path | None = None,
     mae_path: Path | None = None,
     r2_path: Path | None = None,
-) -> Tuple[pd.DataFrame, Dict[str, str]]:
+) -> Tuple[pd.DataFrame, Dict[str, str], pd.DataFrame]:
     results = []
     reports: Dict[str, str] = {}
+    fold_rows: list[dict] = []
 
     for algorithm in BOOSTING_ALGOS:
         for cfg in tqdm(datasets, desc=f"Evaluating regression datasets with {algorithm}"):
-            result, report, _ = evaluate_dataset(cfg, algorithm)
+            result, report, folds = evaluate_dataset(cfg, algorithm)
             results.append(result)
             reports[f"{cfg.key}_{algorithm}"] = report
+            fold_rows.extend(folds)
 
     results_df = pd.DataFrame(results)
-    if make_plot and not results_df.empty:
+    fold_df = pd.DataFrame(fold_rows)
+    if make_plot:
         plot_training_time(results_df, time_path)
-        plot_rmse(results_df, rmse_path)
-        plot_mae(results_df, mae_path)
-        plot_r2(results_df, r2_path)
-    return results_df, reports
+        if not fold_df.empty:
+            plot_rmse(fold_df, rmse_path)
+            plot_mae(fold_df, mae_path)
+            plot_r2(fold_df, r2_path)
+    return results_df, reports, fold_df
 
 
 if __name__ == "__main__":
@@ -95,13 +99,14 @@ if __name__ == "__main__":
         # for key, rep in clf_reports.items():
             # fh.write(f"{key}\n{'=' * 40}\n{rep}\n\n")
 
-    reg_df, reg_reports = run_reg_datasets(
+    reg_df, reg_reports, reg_fold_df = run_reg_datasets(
         time_path=static_dir / "reg_training_time.png",
         rmse_path=static_dir / "rmse.png",
         mae_path=static_dir / "mae.png",
         r2_path=static_dir / "r2.png",
     )
     reg_df.to_csv(static_dir / "reg_results.csv", index=False)
+    reg_fold_df.to_csv(static_dir / "reg_fold_metrics.csv", index=False)
 
     with open(static_dir / "reg_reports.txt", "w") as fh:
         for key, rep in reg_reports.items():

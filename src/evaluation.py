@@ -155,6 +155,26 @@ def evaluate_dataset(
                 for metric, scores in tracked_metrics.items():
                     row[metric] = scores[fold_idx]
                 fold_rows.append(row)
+    else:
+        tracked_metrics = {}
+        for metric in ("rmse", "mae", "r2"):
+            key = f"test_{metric}"
+            if key in cv_results:
+                scores = np.asarray(cv_results[key])
+                if metric in {"rmse", "mae"}:
+                    scores = -scores
+                tracked_metrics[metric] = scores
+        if tracked_metrics:
+            n_folds = len(next(iter(tracked_metrics.values())))
+            for fold_idx in range(n_folds):
+                row = {
+                    "dataset": config.pretty_name,
+                    "model": algorithm,
+                    "fold": fold_idx,
+                }
+                for metric, scores in tracked_metrics.items():
+                    row[metric] = scores[fold_idx]
+                fold_rows.append(row)
 
     result = {
         "dataset": config.pretty_name,

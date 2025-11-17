@@ -60,49 +60,91 @@ def plot_f1_score(fold_df: pd.DataFrame, output_path: Optional[Path] = None) -> 
 def plot_training_time(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
     if "training_time" not in results_df:
         raise ValueError("No training_time column found in results.")
-    plt.figure(figsize=(12, 6))
-    sns.barplot(data=results_df, x="dataset", y="training_time", hue="model", palette="Set2")
-    plt.ylabel("Training Time (s)")
-    plt.xlabel("Dataset")
-    plt.xticks(rotation=30, ha="right")
-    plt.title("Training Time per Dataset and Model")
+
+    datasets = sorted(results_df["dataset"].unique())
+    n_cols = 2
+    n_rows = (len(datasets) + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
+
+    for ax, dataset in zip(axes.flat, datasets):
+        subset = results_df[results_df["dataset"] == dataset]
+        sns.barplot(
+            data=subset,
+            x="model",
+            y="training_time",
+            palette="Set2",
+            ax=ax,
+        )
+        ax.set_title(f"Training Time | {dataset}")
+        ax.set_xlabel("")
+        ax.set_ylabel("Seconds")
+        ax.tick_params(axis="x", rotation=20)
+
+    total_axes = n_rows * n_cols
+    for ax in axes.flat[len(datasets) : total_axes]:
+        ax.axis("off")
+
     plt.tight_layout()
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path, dpi=300)
-    plt.close()
+    plt.close(fig)
 
 
-def _plot_regression_metric(
-    results_df: pd.DataFrame,
-    metric: str,
-    output_path: Optional[Path],
-    title: str,
-    higher_is_better: bool = True,
-) -> None:
-    if metric not in results_df:
-        raise ValueError(f"No {metric} column found in regression results.")
-    plt.figure(figsize=(12, 6))
-    sns.barplot(data=results_df, x="dataset", y=metric, hue="model", palette="Set2")
-    plt.ylabel(metric.upper())
-    plt.xlabel("Dataset")
-    plt.xticks(rotation=30, ha="right")
-    note = "(higher is better)" if higher_is_better else "(lower is better)"
-    plt.title(f"{title} per Dataset and Model {note}")
+def _plot_regression_boxplots(df: pd.DataFrame, metric: str, output_path: Optional[Path], title_prefix: str, lower_is_better: bool = False) -> None:
+    metric_df = df[["dataset", "model", metric]].dropna()
+    if metric_df.empty:
+        raise ValueError(f"No {metric} scores available to plot.")
+
+    datasets = sorted(metric_df["dataset"].unique())
+    n_cols = 2
+    n_rows = (len(datasets) + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows), squeeze=False)
+
+    for ax, dataset in zip(axes.flat, datasets):
+        subset = metric_df[metric_df["dataset"] == dataset]
+        sns.boxplot(
+            data=subset,
+            x="model",
+            y=metric,
+            ax=ax,
+            palette="Set2",
+        )
+        ax.set_title(f"{title_prefix} | {dataset}")
+        ax.set_xlabel("")
+        ylabel = metric.replace("_", " ").upper()
+        ax.set_ylabel(ylabel)
+        padding = 0.05 * (subset[metric].max() - subset[metric].min() + 1e-8)
+        if lower_is_better:
+            ax.set_ylim(
+                max(0.0, subset[metric].min() - padding),
+                subset[metric].max() + padding,
+            )
+        else:
+            ax.set_ylim(
+                subset[metric].min() - padding,
+                subset[metric].max() + padding,
+            )
+        ax.tick_params(axis="x", rotation=20)
+
+    total_axes = n_rows * n_cols
+    for ax in axes.flat[len(datasets) : total_axes]:
+        ax.axis("off")
+
     plt.tight_layout()
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output_path, dpi=300)
-    plt.close()
+    plt.close(fig)
 
 
-def plot_rmse(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
-    _plot_regression_metric(results_df, "test_rmse", output_path, "RMSE", higher_is_better=False)
+def plot_rmse(fold_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_boxplots(fold_df, "rmse", output_path, "RMSE", lower_is_better=True)
 
 
-def plot_mae(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
-    _plot_regression_metric(results_df, "test_mae", output_path, "MAE", higher_is_better=False)
+def plot_mae(fold_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_boxplots(fold_df, "mae", output_path, "MAE", lower_is_better=True)
 
 
-def plot_r2(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
-    _plot_regression_metric(results_df, "test_r2", output_path, "R²", higher_is_better=True)
+def plot_r2(fold_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+    _plot_regression_boxplots(fold_df, "r2", output_path, "R²", lower_is_better=False)
