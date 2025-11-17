@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from datasets import load_dataset
 from sklearn.decomposition import PCA
-from sklearn.datasets import fetch_openml, load_breast_cancer
+from sklearn.datasets import fetch_california_housing, fetch_openml, load_breast_cancer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 @dataclass(frozen=True)
@@ -22,11 +22,12 @@ def _replace_question_marks(frame: pd.DataFrame) -> pd.DataFrame:
 
 ###############################################################################
 # --------------------------------------------------------------------------- #
-# Classification Dataset Loaders
+# Classification Datasets
 # --------------------------------------------------------------------------- #
 ###############################################################################
 
 MAX_CLF_SAMPLE_SIZE = 10_000
+MAX_REG_SAMPLE_SIZE = 10_000
 
 def load_adult_income() -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="adult", version=2, as_frame=True)
@@ -174,7 +175,7 @@ def load_mnist(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -
 
 
 def load_higgs(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
-    dataset = fetch_openml(data_id=45570, as_frame=True)
+    dataset = fetch_openml(name="higgs", version=1, as_frame=True)
     frame = dataset.frame.copy()
     target_col = dataset.details.get("default_target_attribute") if dataset.details else None
     if not target_col:
@@ -187,19 +188,62 @@ def load_higgs(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -
 
 
 CLASSIFICATION_DATASETS: List[DatasetConfig] = [
-    # DatasetConfig("adult", "Adult Income", load_adult_income, "classification"),
-    # DatasetConfig("heart", "Heart Disease", load_heart_disease, "classification"),
-    # DatasetConfig("mushroom", "Mushroom", load_mushrooms, "classification"),
-    # DatasetConfig("telco", "Telco Customer Churn", load_telco_churn, "classification"),
-    # DatasetConfig("breast_cancer", "Breast Cancer", load_breast_cancer_dataset, "classification"),
-    # DatasetConfig("credit", "Credit Card Fraud", load_credit_card_fraud, "classification"),
-    # DatasetConfig("imdb", "IMDB Movie Reviews", load_imdb_reviews, "classification"),
+    DatasetConfig("adult", "Adult Income", load_adult_income, "classification"),
+    DatasetConfig("heart", "Heart Disease", load_heart_disease, "classification"),
+    DatasetConfig("mushroom", "Mushroom", load_mushrooms, "classification"),
+    DatasetConfig("telco", "Telco Customer Churn", load_telco_churn, "classification"),
+    DatasetConfig("breast_cancer", "Breast Cancer", load_breast_cancer_dataset, "classification"),
+    DatasetConfig("credit", "Credit Card Fraud", load_credit_card_fraud, "classification"),
+    DatasetConfig("imdb", "IMDB Movie Reviews", load_imdb_reviews, "classification"),
     DatasetConfig("mnist", "MNIST", load_mnist, "classification"),
-    # DatasetConfig("higgs", "HIGGS", load_higgs, "classification"),
+    DatasetConfig("higgs", "HIGGS", load_higgs, "classification"),
 ]
 
 ###############################################################################
 # --------------------------------------------------------------------------- #
-# Regression Dataset Loaders
+# Regression Datasets
 # --------------------------------------------------------------------------- #
 ###############################################################################
+
+def load_california_housing() -> Tuple[pd.DataFrame, pd.Series]:
+    dataset = fetch_california_housing(as_frame=True)
+    frame = dataset.frame.copy()
+    target = frame.pop("MedHouseVal")
+    return frame, target
+
+
+def load_ames_house_prices(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+    dataset = fetch_openml(name="ames_housing", version=1, as_frame=True)
+    X = dataset.data.copy()
+    y = dataset.target.astype(float)
+    if sample_size and sample_size < len(X):
+        X = X.sample(n=sample_size, random_state=random_state)
+        y = y.loc[X.index]
+    return X.reset_index(drop=True), y.reset_index(drop=True)
+
+
+def load_wine_quality(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+    dataset = fetch_openml(name="wine-quality-white", version=1, as_frame=True)
+    frame = dataset.frame.copy()
+    if sample_size and sample_size < len(frame):
+        frame = frame.sample(n=sample_size, random_state=random_state)
+    y = frame.pop("quality").astype(float)
+    return frame.reset_index(drop=True), y.reset_index(drop=True)
+
+
+def load_superconductivity(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+    dataset = fetch_openml(name="superconduct", version=1, as_frame=True)
+    frame = dataset.frame.copy()
+    target_col = frame.columns[-1]
+    if sample_size and sample_size < len(frame):
+        frame = frame.sample(n=sample_size, random_state=random_state)
+    y = frame.pop(target_col).astype(float)
+    return frame.reset_index(drop=True), y.reset_index(drop=True)
+
+
+REGRESSION_DATASETS: List[DatasetConfig] = [
+    DatasetConfig("california", "California Housing", load_california_housing, "regression"),
+    DatasetConfig("ames", "Ames House Prices", load_ames_house_prices, "regression"),
+    DatasetConfig("wine_quality", "Wine Quality", load_wine_quality, "regression"),
+    DatasetConfig("superconduct", "Superconductivity", load_superconductivity, "regression"),
+]

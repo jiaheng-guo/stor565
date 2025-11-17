@@ -10,14 +10,14 @@ from sklearn.metrics import (
     classification_report,
     f1_score,
     mean_absolute_error,
-    mean_squared_error,
+    root_mean_squared_error,
     r2_score,
     roc_auc_score,
 )
 from sklearn.model_selection import cross_validate, train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from .data_configs import DatasetConfig
+from .preprocess import DatasetConfig
 from .modeling import BOOSTING_ALGOS, build_model_pipeline, scoring
 
 
@@ -25,8 +25,10 @@ def _predict_proba(pipeline, X_test):
     model = pipeline
     if hasattr(model, "predict_proba"):
         proba = model.predict_proba(X_test)
-        if proba.ndim == 2 and proba.shape[1] > 1:
-            return proba[:, 1]
+        if proba.ndim == 2:
+            if proba.shape[1] == 2:
+                return proba[:, 1]
+            return proba
         return proba.ravel()
     if hasattr(model, "decision_function"):
         decision = model.decision_function(X_test)
@@ -50,13 +52,19 @@ def _compute_metrics(
             "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
             "f1_weighted": f1_score(y_true, y_pred, average="weighted"),
         }
-        metrics["roc_auc"] = roc_auc_score(y_true, y_proba, multi_class="ovr") if y_proba is not None else np.nan
+        if y_proba is not None:
+            if y_proba.ndim == 1 and len(np.unique(y_true)) > 2:
+                metrics["roc_auc"] = np.nan
+            else:
+                metrics["roc_auc"] = roc_auc_score(y_true, y_proba, multi_class="ovr")
+        else:
+            metrics["roc_auc"] = np.nan
         labels_true = encoder.inverse_transform(y_true) if encoder is not None else y_true
         labels_pred = encoder.inverse_transform(y_pred) if encoder is not None else y_pred
         report = classification_report(labels_true, labels_pred)
         return metrics, report
 
-    rmse = mean_squared_error(y_true, y_pred, squared=False)
+    rmse = root_mean_squared_error(y_true, y_pred)
     mae = mean_absolute_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred)
     metrics = {"rmse": rmse, "mae": mae, "r2": r2}
@@ -95,7 +103,14 @@ def evaluate_dataset(
         random_state=random_state,
     )
 
-    base_pipeline = build_model_pipeline(X, config.task, algorithm, random_state=random_state)
+    num_classes = len(np.unique(y_encoded)) if config.task == "classification" else None
+    base_pipeline = build_model_pipeline(
+        X,
+        config.task,
+        algorithm,
+        random_state=random_state,
+        num_classes=num_classes,
+    )
     pipeline = clone(base_pipeline)
     start = time.perf_counter()
     pipeline.fit(X_train, y_train)

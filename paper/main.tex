@@ -108,13 +108,13 @@ We evaluate the four boosting algorithms on several publicly available datasets 
         \hline
         \textbf{dataset} & \textbf{\#samples} & \textbf{\#features} & \textbf{domain} & \textbf{link} \\
         \hline
-        California Housing & 20\,640 & 8 & Finance & \href{https://www.kaggle.com/datasets/camnugent/california-housing-prices}{Kaggle} \\
+        California Housing & 20,640 & 8 & Real Estate & \href{https://www.kaggle.com/datasets/camnugent/california-housing-prices}{Kaggle} \\
         \hline
-        Ames House Prices & 1\,460 & 80 & Finance & \href{https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data}{Kaggle} \\
+        Ames House Prices & 1,460 & 80 & Real Estate & \href{https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data}{Kaggle} \\
         \hline
-        Wine Quality & 4\,898 & 11 & Commercial & \href{https://archive.ics.uci.edu/ml/datasets/wine+quality}{UCI} \\
+        Wine Quality & 4,898 & 11 & Business & \href{https://archive.ics.uci.edu/ml/datasets/wine+quality}{UCI} \\
         \hline
-        Boston Housing & 506 & 13 & Finance & \href{https://archive.ics.uci.edu/ml/datasets/housing}{UCI} \\
+        Superconductivity & 21,263 & 81 & Physics & \href{https://archive.ics.uci.edu/dataset/464/superconductivty+data}{UCI} \\
         \hline
     \end{tabular}
     \caption{Characteristics of the Regression Datasets Used}
@@ -146,9 +146,20 @@ In this subsection, we present the comparative results of AdaBoost, GBM, XGBoost
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9
-    \textwidth]{../static/auc_legacy.png}
+    \textwidth]{../static/auroc.png}
     \caption{AUC Comparison Across Boosting Algorithms}
     \label{fig:auc}
+\end{figure}
+
+From the results, we observe that modern boosting algorithms generally outperform their classical counterparts across most datasets, while there is no single algorithm that consistently dominates all others. Notably, XGBoost and LightGBM exhibit significant improvements in AUC scores on larger datasets such as HIGGS and Credit Card Fraud, likely due to their optimized handling of large-scale data through parallelization and histogram-based split finding. On smaller datasets like Heart Disease and Breast Cancer, the performance gap narrows, suggesting that the advantages of modern algorithms may be more pronounced in high-dimensional or large-sample scenarios. Results in terms of the other metrics (accuracy and F1-score) follow similar trends, due to space limitations, we only present AUC results here, please refer to Appendix \ref{sec:appendix_results} for complete results.
+
+In terms of computational efficiency, LightGBM consistently demonstrates the fastest training times across datasets, attributed to its histogram-based approach and leaf-wise tree growth strategy. XGBoost also shows considerable speed improvements over GBM, particularly on larger datasets. AdaBoost, while competitive on smaller datasets, tends to lag in training speed as data size increases. The training time comparison is illustrated in Figure \ref{fig:training_time}.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../static/training_time.png}
+    \caption{Training Time Comparison Across Boosting Algorithms \textcolor{red}{[To Be Updated]}}
+    \label{fig:training_time}
 \end{figure}
 
 \subsection{Comparative Analysis on Regression Tasks}
@@ -171,5 +182,20 @@ In this subsection, we present the comparative results of AdaBoost, GBM, XGBoost
 \appendix
 
 \section{Additional Experimental Results}
+\label{sec:appendix_results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../static/accuracy.png}
+    \caption{Accuracy Comparison Across Boosting Algorithms}
+    \label{fig:accuracy}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{../static/f1_score.png}
+    \caption{F1-score Comparison Across Boosting Algorithms}
+    \label{fig:f1_score}
+\end{figure}
 
 \end{document}

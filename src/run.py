@@ -4,12 +4,12 @@ from typing import Dict, Tuple
 import pandas as pd
 from tqdm import tqdm
 
-from .data_configs import CLASSIFICATION_DATASETS, DatasetConfig
+from .preprocess import CLASSIFICATION_DATASETS, DatasetConfig
 from .evaluation import BOOSTING_ALGOS, evaluate_dataset
 from .utils import plot_accuracy, plot_f1_score, plot_roc_auc, plot_training_time
 
 
-def run_all_datasets(
+def run_clf_datasets(
     datasets: Tuple[DatasetConfig, ...] = tuple(CLASSIFICATION_DATASETS),
     make_plot: bool = True,
     auc_path: Path | None = None,
@@ -39,12 +39,14 @@ def run_all_datasets(
             plot_training_time(results_df, time_path)
     return results_df, reports, fold_df
 
+def run_reg_datasets():
+    pass 
 
 if __name__ == "__main__":
     static_dir = Path("static")
     static_dir.mkdir(parents=True, exist_ok=True)
 
-    df, reports, fold_df = run_all_datasets(
+    df, reports, fold_df = run_clf_datasets(
         auc_path=static_dir / "auroc.png",
         acc_path=static_dir / "accuracy.png",
         f1_path=static_dir / "f1_score.png",

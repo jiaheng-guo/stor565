@@ -19,7 +19,7 @@ from lightgbm import LGBMClassifier, LGBMRegressor
 BOOSTING_ALGOS: List[str] = ["adaboost", "gbm", "xgboost", "lightgbm"]
 
 
-def _build_model(task: str, algorithm: str, random_state: int):
+def _build_model(task: str, algorithm: str, random_state: int, num_classes: int | None = None):
     algorithm = algorithm.lower()
     if algorithm == "adaboost":
         if task == "classification":
@@ -55,15 +55,20 @@ def _build_model(task: str, algorithm: str, random_state: int):
         )
     if algorithm == "lightgbm":
         if task == "classification":
-            return LGBMClassifier(
+            params = dict(
                 n_estimators=600,
                 learning_rate=0.05,
                 subsample=0.9,
                 colsample_bytree=0.9,
-                objective="binary",
                 random_state=random_state,
                 n_jobs=-1,
             )
+            if num_classes is None or num_classes <= 2:
+                params["objective"] = "binary"
+            else:
+                params["objective"] = "multiclass"
+                params["num_class"] = num_classes
+            return LGBMClassifier(**params)
         return LGBMRegressor(
             n_estimators=800,
             learning_rate=0.05,
@@ -81,6 +86,7 @@ def build_model_pipeline(
     task: str,
     algorithm: str,
     random_state: int = 42,
+    num_classes: int | None = None,
 ) -> Pipeline:
     numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
     categorical_features = [col for col in X.columns if col not in numeric_features]
@@ -105,7 +111,7 @@ def build_model_pipeline(
         transformers.append(("cat", categorical_transformer, categorical_features))
 
     preprocessor = ColumnTransformer(transformers, remainder="drop")
-    model = _build_model(task, algorithm, random_state)
+    model = _build_model(task, algorithm, random_state, num_classes=num_classes)
     return Pipeline(steps=[("preprocess", preprocessor), ("model", model)])
 
 
@@ -115,7 +121,7 @@ def scoring(task: str) -> Dict[str, str]:
             "accuracy": "accuracy",
             "balanced_accuracy": "balanced_accuracy",
             "f1_weighted": "f1_weighted",
-            "roc_auc": "roc_auc",
+            "roc_auc": "roc_auc_ovr",
         }
     return {
         "rmse": "neg_root_mean_squared_error",
