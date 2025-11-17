@@ -35,23 +35,21 @@
 
 \section{Introduction}
 
-% Boosting algorithms represent a powerful and widely adopted paradigm within supervised machine learning, particularly for tasks involving tabular data. Their ability to sequentially combine the predictions of multiple weak learners into a strong predictive model has led to implementations across numerous applications. Historically, methods such as \textbf{AdaBoost} laid the groundwork for ensemble learning, while the \textbf{Gradient Boosting Machine (GBM)} refined the approach by framing boosting as an additive model that iteratively minimizes a differentiable loss function. These classical algorithms established the fundamental principles upon which all subsequent boosting methods are built.
+Boosting algorithms represent a powerful and widely adopted paradigm within supervised machine learning, particularly for tasks involving tabular data. Their ability to sequentially combine the predictions of multiple weak learners into a strong predictive model has led to implementations across numerous applications. Historically, methods such as \textbf{AdaBoost} laid the groundwork for ensemble learning, while the \textbf{Gradient Boosting Machine (GBM)} refined the approach by framing boosting as an additive model that iteratively minimizes a differentiable loss function. These classical algorithms established the fundamental principles upon which all subsequent boosting methods are built.
 
-% In recent years, the field has seen the emergence of highly optimized implementations, most notably \textbf{XGBoost} and \textbf{LightGBM}. These modern frameworks have achieved widespread acclaim, frequently dominating data science competitions due to their exceptional speed, scalability, and predictive accuracy. They build upon the core concepts of gradient boosting while introducing significant architectural and algorithmic enhancements, such as advanced regularization, histogram-based split finding, and novel tree growth strategies.
+In recent years, the field has seen the emergence of highly optimized implementations, most notably \textbf{XGBoost} and \textbf{LightGBM}. These modern frameworks have achieved widespread acclaim, frequently dominating data science competitions due to their exceptional speed, scalability, and predictive accuracy. They build upon the core concepts of gradient boosting while introducing significant architectural and algorithmic enhancements, such as advanced regularization, histogram-based split finding, and novel tree growth strategies.
 
-% Despite the undisputed empirical success of these modern frameworks, a direct comparative analysis that systematically dissects \textit{why} they outperform their predecessors is often lacking. Choices of algorithms are often based on popular opinion rather than solid reasons. There remains a critical gap in quantifying the practical impact of these modern innovations---such as regularization, histogram-based optimization, and sampling strategies---under a unified experimental setup.
+Despite the undisputed empirical success of these modern frameworks, a direct comparative analysis that systematically dissects \textit{why} they outperform their predecessors is often lacking. Choices of algorithms are often based on popular opinion rather than solid reasons. There remains a critical gap in quantifying the practical impact of these modern innovations---such as regularization, histogram-based optimization, and sampling strategies---under a unified experimental setup.
 
-% This study aims to address this gap by conducting a comparative analysis of classical boosting algorithms, \textbf{AdaBoost} and \textbf{GBM}, alongside their modern counterparts, \textbf{XGBoost} and \textbf{LightGBM}. Our central research objective is to empirically evaluate and quantify the performance improvements offered by recent implementations and to identify the specific design innovations that underpin these enhancements through examining the following:
+This study aims to address this gap by conducting a comparative analysis of classical boosting algorithms, \textbf{AdaBoost} and \textbf{GBM}, alongside their modern counterparts, \textbf{XGBoost} and \textbf{LightGBM}. Our central research objective is to empirically evaluate and quantify the performance improvements offered by recent implementations and to identify the specific design innovations that underpin these enhancements through examining the following:
 
-% \begin{itemize}
-%     \item \textbf{Predictive performance:} measurable improvements over classical methods.
-%     \item \textbf{Model complexity and overfitting:} effects of depth, shrinkage, and regularization.
-%     \item \textbf{Computational efficiency:} impact of parallelization, histogram-based training, and sampling strategies.
-%     \item \textbf{Feature importance stability:} consistency of learned feature rankings across folds and algorithms.
-%     \item \textbf{Scalability:} relative performance on larger datasets, highlighting differences in system design.
-% \end{itemize}
-
-Our code is available at: \url{https://github.com/jiaheng-guo/stor565}
+\begin{itemize}
+    \item \textbf{Predictive performance:} measurable improvements over classical methods.
+    \item \textbf{Model complexity and overfitting:} effects of depth, shrinkage, and regularization.
+    \item \textbf{Computational efficiency:} impact of parallelization, histogram-based training, and sampling strategies.
+    \item \textbf{Feature importance stability:} consistency of learned feature rankings across folds and algorithms.
+    \item \textbf{Scalability:} relative performance on larger datasets, highlighting differences in system design.
+\end{itemize}
 
 \section{Related Works}
 
@@ -59,16 +57,96 @@ Review of existing studies in related fields.
 
 \section{Methodology}
 
-\textit{\textcolor{red}{Please be aware that the paper structure Prof. Zhong provided in this template (Section 2 Related Works, Section 3 Methodology) is different from what we proposed in the group chat. Please move the mathematics explanations to Section 3, and reserve Section 2 for literature review, which covers the historical development of boosting algorithms, their applications, and comparisons in previous studies, with minimal mathematical details.}}
+Now we describe the algorithms used in the LightGBM and XGBoost models.
+First we introduce
+the gradient boosting algorithm
+following the presentation in Hastie et al.
+in order to explain
+the workings of the LightGBM and XGBoost algorithms.
 
-Describe the models, techniques, or algorithms you developed or compared. 
+The gradient boosting model is an additive model of trees
+trained in a forward stagewise manner.
+Let the training set consist of \(N\) instances, denoted
+\(\{ x_1, \dots, x_N \} \), with \(x_i \in \R^p\)
+where \(p\) is the number of features. 
+We denote a tree as
+\[
+    T(x; \Theta ) = \sum_{j=1}^J I(x \in R_j)
+\]
+with parameters \(\Theta = \{ R_j, \gamma _j \}_{1}^J \),
+where the \(R_j\) are regions that partition the space of
+all joint predictor variable values so
+that each \(x_i \in R_j\) is assigned by the tree to
+the \(j\)-th leaf node, \(\gamma _j\) is
+the output of the tree at the \(j\)-th leaf node,
+and \(J\) is the number of leaves. Hence
+the gradient boosting model is a sum of \(M\) trees
+\[
+    f_M(x) = \sum_{m=1}^M T(x ; \Theta _m)
+\]
+built iteratively, where for each iteration \(m\)
+from \(m=1\) to \(m=M\) we solve
+\[
+    \hat{\Theta}_m = \arg \min_{\Theta _m} \sum_{i=1}^N
+    L(y_i, f_{m-1} (x_i) + T(x_i; \Theta _m))
+\]
+for a choice of loss function \(L\).
+For general loss criteria
+we must approximate \(L\) in order to arrive at a simple and fast algorithm.
+We do so by fitting \(T(x; \Theta _m)\) to the negative
+gradient of \(L(\mathbf{f}) = \sum_{i=1}^N L(y_i, f(x_i))\) with regard to
+\[
+    \mathbf{f} = \begin{bmatrix}
+        f(x_1) & f(x_2) & \cdots &  f(x_n) \\
+    \end{bmatrix}^T
+\]
+evaluated at \(\mathbf{f} = \mathbf{f}_{m-1}\), in analogy to steepest descent (whereby we would
+find the ideal \(\mathbf{f}\) by subtracting a multiple of the negative gradient from
+\(\mathbf{f}\) and iterating with the new value).
 
-\newpage
+Recall that we find approximate solutions for the optimal \(R_j\) by greedy
+tree induction. In other words, we recursively partition the space of joint predictor
+variable values by splitting on a feature \(j\) at a point \(s\)
+and considering \[R_L(j, s) = \{ x_i | x_{ij} \leq s \}
+\text{ and } R_R (j, s) = \{ x_i | x_{ij} > s \}\]
+where the \(R_L(j,s)\) and \(R_R(j,s)\) are subsets of the points \(O\)
+at the current node.
+We choose each split by finding the feature \(j\) and
+splitting point \(s\) that minimizes the squared error loss against the negative gradient
+with the optimal \(\gamma_L\) and \(\gamma _R\) for each region:
+\[
+    \min_{j, s} [\min_{\gamma _L} \sum_{x_i \in R_L(j,s)} (g_i - \gamma_L)^2
+    + \min _{\gamma _R} \sum_{x_i \in R_R(j, s)} (g_i - \gamma _R)^2]
+\]
+where \(g_i = \partial_{\mathbf{f} _i} L(y_i, \mathbf{f}_i) |_{\mathbf{f}_i = f_{m-1} (x_i)}\).
+Note that the optimal \(\gamma \) for each inner minimization is given by the mean
+of the \(g_i\) for \(x_i \in R(j,s)\):
+\[
+    \arg \min _{\gamma }\sum_{x_i \in R(j,s)} (g_i - \gamma)^2
+    = \frac{1}{|R(j,s)|} \sum_{x_i \in R(j,s)} g_i.
+\]
+Minimizing the above objective in \(j,s\) is equivalent to maximizing the variance gain
+at \(O\),
+defined as
+\[
+    V_{O}(j,s) = \frac{1}{|O|} \left( \frac{(\sum_{x_i \in R_L(j,s)} g_i )^2}{|R_L(j,s)|}
+    + \frac{(\sum_{x_i \in R_R(j,s)} g_i)^2}{|R_R(j,s)|}\right).
+\]
+
+LightGBM alters the traditional gradient boosting method by considering
+only the data instances with the largest gradients, along with
+a random sample of the remaining data instances
+when splitting (\emph{Gradient-based One-Side Sampling},
+or GOSS). This increases the efficiency of the method while still accurately
+estimating the variance gain.
+
+… (incomplete)
+
 
 \section{Experiments Results}
 \label{sec:experiment}
 
-This section describes the experimental setup used to compare AdaBoost, GBM, XGBoost, and LightGBM. All models were evaluated under a unified and reproducible framework with consistent preprocessing, hyperparameter tuning, and cross-validation procedures. Comparative analysis are then carried out, focusing on predictive performance, computational efficiency, and feature importance stability.
+This section describes the experimental setup used to compare AdaBoost, GBM, XGBoost, and LightGBM. All models were evaluated under a unified and reproducible framework with consistent preprocessing, hyperparameter tuning, and cross-validation procedures. Comparative analysis are then carried out, focusing on predictive performance, computational efficiency, and feature importance stability. Our code is available at: \url{https://github.com/jiaheng-guo/stor565}.
 
 \subsection{Datasets and Preprocessing}
 
@@ -143,10 +221,9 @@ Additionally, we measured training time and inference latency across datasets of
 
 In this subsection, we present the comparative results of AdaBoost, GBM, XGBoost, and LightGBM on the classification datasets described in Section \ref{sec:experiment}. The AUC scores across different datasets and algorithms are summarized in Figure \ref{fig:auc}.
 
-\begin{figure}[H]
+\begin{figure}[ht]
     \centering
-    \includegraphics[width=0.9
-    \textwidth]{../static/auroc.png}
+    \includegraphics[width=0.9\textwidth]{../static/auroc.png}
     \caption{AUC Comparison Across Boosting Algorithms}
     \label{fig:auc}
 \end{figure}
@@ -166,11 +243,11 @@ In terms of computational efficiency, LightGBM consistently demonstrates the fas
 
 \section{Conclusion and Future Direction}
 
-% Based on the comparison of classical and modern boosting algorithms, we systematically evaluate the impact of recent design innovations. Our key findings confirm that modern frameworks represent a significant advancement in both performance and efficiency. Across a suite of classification and regression tasks, \textbf{XGBoost} and \textbf{LightGBM} consistently achieved superior predictive accuracy compared to their predecessors. Specifically, histogram-based methods provided dramatic speedups in \textbf{computational efficiency}, while the built-in L1 and L2 regularization in XGBoost offered more robust control over \textbf{model complexity and overfitting}. Furthermore, our analysis of \textbf{feature importance stability} suggested that modern algorithms tend to produce more consistent feature rankings, thus enhancing their reliability.
+Based on the comparison of classical and modern boosting algorithms, we systematically evaluate the impact of recent design innovations. Our key findings confirm that modern frameworks represent a significant advancement in both performance and efficiency. Across a suite of classification and regression tasks, \textbf{XGBoost} and \textbf{LightGBM} consistently achieved superior predictive accuracy compared to their predecessors. Specifically, histogram-based methods provided dramatic speedups in \textbf{computational efficiency}, while the built-in L1 and L2 regularization in XGBoost offered more robust control over \textbf{model complexity and overfitting}. Furthermore, our analysis of \textbf{feature importance stability} suggested that modern algorithms tend to produce more consistent feature rankings, thus enhancing their reliability.
 
-% Aside from these clear results, there do exist several \textbf{limitations}. First, the analysis was confined to a selection of publicly available Kaggle datasets. While diverse, they may not capture the full spectrum of data characteristics in all real-world applications, such as  datasets with extremely high-cardinality categorical features or non-standard data distributions, to name a few. Second, while we employed a standardized hyperparameter tuning process, the vastness of the parameter search space means we cannot guarantee that the absolute optimal configuration for each algorithm was discovered. It is possible that classical models, in particular, could see further improvement with more advanced tuning.
+Aside from these clear results, there do exist several \textbf{limitations}. First, the analysis was confined to a selection of publicly available Kaggle datasets. While diverse, they may not capture the full spectrum of data characteristics in all real-world applications, such as  datasets with extremely high-cardinality categorical features or non-standard data distributions, to name a few. Second, while we employed a standardized hyperparameter tuning process, the vastness of the parameter search space means we cannot guarantee that the absolute optimal configuration for each algorithm was discovered. It is possible that classical models, in particular, could see further improvement with more advanced tuning.
 
-% Based on these findings and limitations, several \textbf{future directions} could be deduced. A possible next step is to extend this comparative analysis to a wider and more diverse range of datasets, including those from different domains such as finance or bioinformatics, to further validate the \textbf{scalability} and generalizability of these algorithms. Potential techniques for hyperparameter tuning, such as Bayesian optimization, could be utilized more  to discover the peak performance of each model. Another valuable extension is to benchmark these boosting methods against other competing model classes, particularly deep learning architectures designed for tabular data, to better situate their performance within the broader machine learning landscape.
+Based on these findings and limitations, several \textbf{future directions} could be deduced. A possible next step is to extend this comparative analysis to a wider and more diverse range of datasets, including those from different domains such as finance or bioinformatics, to further validate the \textbf{scalability} and generalizability of these algorithms. Potential techniques for hyperparameter tuning, such as Bayesian optimization, could be utilized more  to discover the peak performance of each model. Another valuable extension is to benchmark these boosting methods against other competing model classes, particularly deep learning architectures designed for tabular data, to better situate their performance within the broader machine learning landscape.
 
 \cite{freund1997decision} % temporary citation to test bibliography, delete later
 

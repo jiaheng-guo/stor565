@@ -224,11 +224,12 @@ def load_ames_house_prices(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state:
 
 def load_wine_quality(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="wine-quality-white", version=1, as_frame=True)
-    frame = dataset.frame.copy()
-    if sample_size and sample_size < len(frame):
-        frame = frame.sample(n=sample_size, random_state=random_state)
-    y = frame.pop("quality").astype(float)
-    return frame.reset_index(drop=True), y.reset_index(drop=True)
+    X = dataset.data.copy()
+    y = dataset.target.astype(float)
+    if sample_size and sample_size < len(X):
+        X = X.sample(n=sample_size, random_state=random_state)
+        y = y.loc[X.index]
+    return X.reset_index(drop=True), y.reset_index(drop=True)
 
 
 def load_superconductivity(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
