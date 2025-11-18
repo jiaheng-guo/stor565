@@ -19,19 +19,37 @@ from lightgbm import LGBMClassifier, LGBMRegressor
 BOOSTING_ALGOS: List[str] = ["adaboost", "gbm", "xgboost", "lightgbm"]
 
 
-def _build_model(task: str, algorithm: str, random_state: int, num_classes: int | None = None):
+def _build_model(
+    task: str,
+    algorithm: str,
+    random_state: int,
+    num_classes: int | None = None,
+    model_params: Dict | None = None,
+):
     algorithm = algorithm.lower()
     if algorithm == "adaboost":
         if task == "classification":
-            return AdaBoostClassifier(n_estimators=400, learning_rate=0.5, random_state=random_state)
-        return AdaBoostRegressor(n_estimators=500, learning_rate=0.3, loss="square", random_state=random_state)
+            params = dict(n_estimators=400, learning_rate=0.5, random_state=random_state)
+            if model_params:
+                params.update(model_params)
+            return AdaBoostClassifier(**params)
+        params = dict(n_estimators=500, learning_rate=0.3, loss="square", random_state=random_state)
+        if model_params:
+            params.update(model_params)
+        return AdaBoostRegressor(**params)
     if algorithm == "gbm":
         if task == "classification":
-            return GradientBoostingClassifier(random_state=random_state)
-        return GradientBoostingRegressor(random_state=random_state)
+            params = dict(random_state=random_state)
+            if model_params:
+                params.update(model_params)
+            return GradientBoostingClassifier(**params)
+        params = dict(random_state=random_state)
+        if model_params:
+            params.update(model_params)
+        return GradientBoostingRegressor(**params)
     if algorithm == "xgboost":
         if task == "classification":
-            return XGBClassifier(
+            params = dict(
                 n_estimators=600,
                 learning_rate=0.05,
                 max_depth=4,
@@ -42,7 +60,10 @@ def _build_model(task: str, algorithm: str, random_state: int, num_classes: int 
                 random_state=random_state,
                 n_jobs=-1,
             )
-        return XGBRegressor(
+            if model_params:
+                params.update(model_params)
+            return XGBClassifier(**params)
+        params = dict(
             n_estimators=800,
             learning_rate=0.05,
             max_depth=5,
@@ -53,6 +74,9 @@ def _build_model(task: str, algorithm: str, random_state: int, num_classes: int 
             random_state=random_state,
             n_jobs=-1,
         )
+        if model_params:
+            params.update(model_params)
+        return XGBRegressor(**params)
     if algorithm == "lightgbm":
         if task == "classification":
             params = dict(
@@ -68,8 +92,10 @@ def _build_model(task: str, algorithm: str, random_state: int, num_classes: int 
             else:
                 params["objective"] = "multiclass"
                 params["num_class"] = num_classes
+            if model_params:
+                params.update(model_params)
             return LGBMClassifier(**params)
-        return LGBMRegressor(
+        params = dict(
             n_estimators=800,
             learning_rate=0.05,
             subsample=0.9,
@@ -78,6 +104,9 @@ def _build_model(task: str, algorithm: str, random_state: int, num_classes: int 
             random_state=random_state,
             n_jobs=-1,
         )
+        if model_params:
+            params.update(model_params)
+        return LGBMRegressor(**params)
     raise ValueError(f"Unsupported algorithm: {algorithm}")
 
 
@@ -87,6 +116,7 @@ def build_model_pipeline(
     algorithm: str,
     random_state: int = 42,
     num_classes: int | None = None,
+    model_params: Dict | None = None,
 ) -> Pipeline:
     numeric_features = X.select_dtypes(include=[np.number]).columns.tolist()
     categorical_features = [col for col in X.columns if col not in numeric_features]
@@ -111,7 +141,7 @@ def build_model_pipeline(
         transformers.append(("cat", categorical_transformer, categorical_features))
 
     preprocessor = ColumnTransformer(transformers, remainder="drop")
-    model = _build_model(task, algorithm, random_state, num_classes=num_classes)
+    model = _build_model(task, algorithm, random_state, num_classes=num_classes, model_params=model_params)
     return Pipeline(steps=[("preprocess", preprocessor), ("model", model)])
 
 

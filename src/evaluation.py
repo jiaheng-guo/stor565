@@ -1,5 +1,8 @@
+import json
 import time
 from typing import Dict, Tuple
+
+import optuna
 
 import numpy as np
 import pandas as pd
@@ -72,12 +75,108 @@ def _compute_metrics(
     return metrics, report
 
 
+def _suggest_params(trial: optuna.Trial, algorithm: str, task: str) -> Dict:
+    alg = algorithm.lower()
+    if alg == "adaboost":
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 100, 800),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-2, 5e-1, log=True),
+        }
+        if task == "regression":
+            params["loss"] = trial.suggest_categorical("loss", ["square", "linear", "exponential"])
+        return params
+    if alg == "gbm":
+        return {
+            "n_estimators": trial.suggest_int("n_estimators", 100, 800),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 1e-1, log=True),
+            "max_depth": trial.suggest_int("max_depth", 2, 6),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+        }
+    if alg == "xgboost":
+        return {
+            "n_estimators": trial.suggest_int("n_estimators", 200, 1000),
+            "learning_rate": trial.suggest_float("learning_rate", 5e-3, 2e-1, log=True),
+            "max_depth": trial.suggest_int("max_depth", 3, 8),
+            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 10.0, log=True),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 10.0, log=True),
+        }
+    if alg == "lightgbm":
+        params = {
+            "n_estimators": trial.suggest_int("n_estimators", 200, 1000),
+            "learning_rate": trial.suggest_float("learning_rate", 5e-3, 1e-1, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 31, 255),
+            "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 1.0),
+            "bagging_fraction": trial.suggest_float("bagging_fraction", 0.6, 1.0),
+            "bagging_freq": trial.suggest_int("bagging_freq", 1, 7),
+        }
+        return params
+    raise ValueError(f"Unsupported algorithm for tuning: {algorithm}")
+
+
+def tune_hyperparameters(
+    config: DatasetConfig,
+    algorithm: str,
+    n_trials: int = 20,
+    random_state: int = 42,
+) -> Tuple[Dict, float]:
+    X, y = config.loader()
+
+    if config.task == "classification":
+        if not isinstance(y, pd.Series):
+            y = pd.Series(y)
+        encoder = LabelEncoder()
+        y_encoded = encoder.fit_transform(y)
+        stratify = y_encoded
+        scoring_metric = "accuracy"
+        direction = "maximize"
+    else:
+        encoder = None
+        y_encoded = y
+        stratify = None
+        scoring_metric = "neg_root_mean_squared_error"
+        direction = "maximize"
+
+    num_classes = len(np.unique(y_encoded)) if config.task == "classification" else None
+
+    def objective(trial: optuna.Trial) -> float:
+        params = _suggest_params(trial, algorithm, config.task)
+        pipeline = build_model_pipeline(
+            X,
+            config.task,
+            algorithm,
+            random_state=random_state,
+            num_classes=num_classes,
+            model_params=params,
+        )
+        cv_results = cross_validate(
+            pipeline,
+            X,
+            y_encoded,
+            cv=5,
+            scoring=scoring_metric,
+            n_jobs=-1,
+        )
+        score = cv_results["test_score"].mean()
+        return score
+
+    study = optuna.create_study(direction=direction)
+    study.optimize(objective, n_trials=n_trials)
+
+    best_params = study.best_params
+    best_score = study.best_value
+    if config.task == "regression":
+        best_score = -best_score  # Convert back to RMSE
+    return best_params, best_score
+
 def evaluate_dataset(
     config: DatasetConfig,
     algorithm: str,
     test_size: float = 0.2,
     cv: int = 5,
     random_state: int = 42,
+    model_params: Dict | None = None,
 ) -> Tuple[Dict[str, float], str, list[dict]]:
     X, y = config.loader()
 
@@ -110,6 +209,7 @@ def evaluate_dataset(
         algorithm,
         random_state=random_state,
         num_classes=num_classes,
+        model_params=model_params,
     )
     pipeline = clone(base_pipeline)
     start = time.perf_counter()
@@ -192,4 +292,5 @@ def evaluate_dataset(
 __all__ = [
     "evaluate_dataset",
     "BOOSTING_ALGOS",
+    "tune_hyperparameters",
 ]

@@ -272,4 +272,23 @@ Based on these findings and limitations, several \textbf{future directions} coul
     \label{fig:f1_score}
 \end{figure}
 
+% Regression baseline vs tuned:
+%                dataset     model  test_rmse_baseline  test_rmse_tuned  test_rmse_delta  test_mae_delta  test_r2_delta
+% 0   California Housing  adaboost            1.269818         0.750146        -0.519672       -0.543407       0.801062
+% 1    Ames House Prices  adaboost        39005.423970     34091.847825     -4913.576145    -5351.816470       0.044798
+% 2         Wine Quality  adaboost            0.771389         0.730373        -0.041015       -0.032607       0.079532
+% 3    Superconductivity  adaboost           21.607696        17.384940        -4.222757       -5.878300       0.144182
+% 4   California Housing       gbm            0.542217         0.482739        -0.059478       -0.049101       0.046522
+% 5    Ames House Prices       gbm        25668.765298     24174.343458     -1494.421840    -1658.767733       0.009290
+% 6         Wine Quality       gbm            0.680249         0.660448        -0.019801       -0.018330       0.034278
+% 7    Superconductivity       gbm           13.416559        11.011644        -2.404914       -2.396890       0.051443
+% 8   California Housing   xgboost            0.445302         0.478503         0.033201        0.030672      -0.023406
+% 9    Ames House Prices   xgboost        23168.119075     23559.469047       391.349971      328.350498      -0.002281
+% 10        Wine Quality   xgboost            0.598362         0.650788         0.052426        0.068841      -0.084559
+% 11   Superconductivity   xgboost           10.918964        10.743663        -0.175301       -0.173830       0.003325
+% 12  California Housing  lightgbm            0.433566         0.472661         0.039094        0.030619      -0.027036
+% 13   Ames House Prices  lightgbm        26839.528636     26393.962655      -445.565981     -337.391390       0.002958
+% 14        Wine Quality  lightgbm            0.584539         0.643522         0.058983        0.079852      -0.093528
+% 15   Superconductivity  lightgbm           10.796724        10.814366         0.017642       -0.137916      -0.000334
+
 \end{document}

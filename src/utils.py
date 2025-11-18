@@ -57,12 +57,11 @@ def plot_f1_score(fold_df: pd.DataFrame, output_path: Optional[Path] = None) -> 
     _plot_metric_boxplots(fold_df, "f1_weighted", output_path, "F1-score")
 
 
-def plot_training_time(results_df: pd.DataFrame, output_path: Optional[Path] = None) -> None:
+def plot_training_time(results_df: pd.DataFrame, output_path: Optional[Path] = None, n_cols: int = 2) -> None:
     if "training_time" not in results_df:
         raise ValueError("No training_time column found in results.")
 
     datasets = sorted(results_df["dataset"].unique())
-    n_cols = 2
     n_rows = (len(datasets) + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
 
