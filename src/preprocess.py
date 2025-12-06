@@ -26,9 +26,6 @@ def _replace_question_marks(frame: pd.DataFrame) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 ###############################################################################
 
-MAX_CLF_SAMPLE_SIZE = 10_000
-MAX_REG_SAMPLE_SIZE = 10_000
-
 def load_adult_income() -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="adult", version=2, as_frame=True)
     X = _replace_question_marks(dataset.data.copy())
@@ -85,23 +82,15 @@ def load_breast_cancer_dataset() -> Tuple[pd.DataFrame, pd.Series]:
     return frame, y
 
 
-def load_credit_card_fraud(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_credit_card_fraud(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="creditcard", version=1, as_frame=True)
     frame = dataset.frame.copy()
     frame["Class"] = frame["Class"].astype(int)
-    if sample_size and sample_size < len(frame):
-        frac = sample_size / len(frame)
-        samples = []
-        for label, group in frame.groupby("Class"):
-            n = max(1, int(round(len(group) * frac)))
-            samples.append(group.sample(n=min(len(group), n), random_state=random_state))
-        frame = pd.concat(samples).sample(frac=1, random_state=random_state).reset_index(drop=True)
     y = frame.pop("Class").map({0: "legitimate", 1: "fraud"})
     return frame, y
 
 
 def load_imdb_reviews(
-    sample_size: int = MAX_CLF_SAMPLE_SIZE,
     random_state: int = 42,
     max_features: int = 50_000
 ) -> Tuple[pd.DataFrame, pd.Series]:
@@ -121,10 +110,6 @@ def load_imdb_reviews(
          ds["test"].to_pandas()[["text", "label"]]],
         ignore_index=True
     )
-
-    # Optional subsampling
-    if sample_size and sample_size < len(df):
-        df = df.sample(n=sample_size, random_state=random_state)
 
     # Extract text + labels
     texts = df["text"].fillna("").tolist()
@@ -153,15 +138,10 @@ def load_imdb_reviews(
 
     return X_df, y
 
-def load_mnist(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_mnist(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="mnist_784", version=1, as_frame=False)
     X = pd.DataFrame(dataset.data)
     y = pd.Series(dataset.target.astype(str))
-    if sample_size and sample_size < len(X):
-        rs = np.random.RandomState(random_state)
-        idx = rs.choice(len(X), size=sample_size, replace=False)
-        X = X.iloc[idx]
-        y = y.iloc[idx]
     X_array = X.to_numpy(dtype=np.float32)
     if X_array.ndim == 1:
         X_array = X_array.reshape(1, -1)
@@ -174,15 +154,13 @@ def load_mnist(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -
     return X_pca.reset_index(drop=True), y.reset_index(drop=True)
 
 
-def load_higgs(sample_size: int = MAX_CLF_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_higgs(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="higgs", version=1, as_frame=True)
     frame = dataset.frame.copy()
     target_col = dataset.details.get("default_target_attribute") if dataset.details else None
     if not target_col:
         target_candidates = [col for col in frame.columns if col.lower() in {"class", "target", "label"}]
         target_col = target_candidates[0] if target_candidates else frame.columns[-1]
-    if sample_size and sample_size < len(frame):
-        frame = frame.sample(n=sample_size, random_state=random_state)
     y = frame.pop(target_col).astype(str).str.strip()
     return frame.reset_index(drop=True), y.reset_index(drop=True)
 
@@ -212,32 +190,24 @@ def load_california_housing() -> Tuple[pd.DataFrame, pd.Series]:
     return frame, target
 
 
-def load_ames_house_prices(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_ames_house_prices(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="ames_housing", version=1, as_frame=True)
     X = dataset.data.copy()
     y = dataset.target.astype(float)
-    if sample_size and sample_size < len(X):
-        X = X.sample(n=sample_size, random_state=random_state)
-        y = y.loc[X.index]
     return X.reset_index(drop=True), y.reset_index(drop=True)
 
 
-def load_wine_quality(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_wine_quality(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="wine-quality-white", version=1, as_frame=True)
     X = dataset.data.copy()
     y = dataset.target.astype(float)
-    if sample_size and sample_size < len(X):
-        X = X.sample(n=sample_size, random_state=random_state)
-        y = y.loc[X.index]
     return X.reset_index(drop=True), y.reset_index(drop=True)
 
 
-def load_superconductivity(sample_size: int = MAX_REG_SAMPLE_SIZE, random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
+def load_superconductivity(random_state: int = 42) -> Tuple[pd.DataFrame, pd.Series]:
     dataset = fetch_openml(name="superconduct", version=1, as_frame=True)
     frame = dataset.frame.copy()
     target_col = frame.columns[-1]
-    if sample_size and sample_size < len(frame):
-        frame = frame.sample(n=sample_size, random_state=random_state)
     y = frame.pop(target_col).astype(float)
     return frame.reset_index(drop=True), y.reset_index(drop=True)
 

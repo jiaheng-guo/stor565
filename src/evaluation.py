@@ -128,13 +128,11 @@ def tune_hyperparameters(
             y = pd.Series(y)
         encoder = LabelEncoder()
         y_encoded = encoder.fit_transform(y)
-        stratify = y_encoded
         scoring_metric = "accuracy"
         direction = "maximize"
     else:
         encoder = None
         y_encoded = y
-        stratify = None
         scoring_metric = "neg_root_mean_squared_error"
         direction = "maximize"
 
@@ -167,7 +165,7 @@ def tune_hyperparameters(
     best_params = study.best_params
     best_score = study.best_value
     if config.task == "regression":
-        best_score = -best_score  # Convert back to RMSE
+        best_score = -best_score
     return best_params, best_score
 
 def evaluate_dataset(
