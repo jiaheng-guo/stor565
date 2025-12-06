@@ -53,75 +53,135 @@ In parallel with these studies, our work offers a narrower comparison of classic
 
 \section{Methodology}
 
-We make use of the gradient boosting algorithm, as well as the LightGBM and XGBoost algorithms which build on traditional gradient boosting. First we briefly introduce the gradient boosting algorithm following the presentation in Hastie et al. \cite{hastie_elements_2009} and then discuss the LightGBM and XGBoost algorithms, primarily highlighting how they differ from traditional gradient boosting.
+We make
+use of the gradient boosting algorithm,
+as well as the LightGBM and XGBoost algorithms which build on traditional gradient boosting.
+First we briefly introduce
+the gradient boosting algorithm
+following the presentation in Hastie et al. \cite{hastie_elements_2009}
+and then discuss the LightGBM and XGBoost algorithms, primarily highlighting
+how they differ from traditional gradient boosting.
 
-The gradient boosting model is an additive model of trees trained in a forward stagewise manner.
-Let the training set consist of \(N\) instances, denoted \(\{ x_1, \dots, x_N \} \), with \(x_i \in \R^p\) where \(p\) is the number of features. We denote a tree as
+
+The gradient boosting model is an additive model of trees
+trained in a forward stagewise manner.
+Let the training set consist of \(N\) instances, denoted
+\(\{ x_1, \dots, x_N \} \), with \(x_i \in \R^p\)
+where \(p\) is the number of features. 
+We denote a tree as
 \[
     T(x; \Theta ) = \sum_{j=1}^J \gamma _j I(x \in R_j)
 \]
-with parameters \(\Theta = \{ R_j, \gamma _j \}_{1}^J \), where the \(R_j\) are regions that partition the space of all joint predictor variable values so that each \(x_i \in R_j\) is assigned by the tree to the \(j\)-th leaf node, \(\gamma _j\) is the output of the tree at the \(j\)-th leaf node, and \(J\) is the number of leaves. Hence the gradient boosting model is a sum of \(M\) trees
+with parameters \(\Theta = \{ R_j, \gamma _j \}_{1}^J \),
+where the \(R_j\) are regions that partition the space of
+all joint predictor variable values so
+that each \(x_i \in R_j\) is assigned by the tree to
+the \(j\)-th leaf node, \(\gamma _j\) is
+the output of the tree at the \(j\)-th leaf node,
+and \(J\) is the number of leaves. Hence
+the gradient boosting model is a sum of \(M\) trees
 \[
     f_M(x) = \sum_{m=1}^M T(x ; \Theta _m)
 \]
-built iteratively, where for each iteration \(m\) from \(m=1\) to \(m=M\) we solve
+built iteratively, where for each iteration \(m\)
+from \(m=1\) to \(m=M\) we solve
 \[
     \hat{\Theta}_m = \arg \min_{\Theta _m} \sum_{i=1}^N
     L(y_i, f_{m-1} (x_i) + T(x_i; \Theta _m))
 \]
-for a choice of loss function \(L\). For general loss criteria we must approximate \(L\) when optimizing in order to arrive at a simple and fast algorithm. We do so by fitting \(T(x; \Theta _m)\) to the negative gradient values of \(L(\mathbf{f}) = \sum_{i=1}^N L(y_i, f(x_i))\) with regard to
+for a choice of loss function \(L\).
+For general loss criteria
+we must approximate \(L\) when optimizing
+in order to arrive at a simple and fast algorithm.
+We do so by fitting \(T(x; \Theta _m)\) to the negative
+gradient values of \(L(\mathbf{f}) = \sum_{i=1}^N L(y_i, f(x_i))\),
+where the gradient is taken with regard to
 \[
     \mathbf{f} = \begin{bmatrix}
-        f(x_1) & f(x_2) & \cdots &  f(x_n) \\
+        f(x_1) & f(x_2) & \cdots &  f(x_N) \\
     \end{bmatrix}^T
 \]
-evaluated at \(\mathbf{f} = \mathbf{f}_{m-1}\), in analogy to steepest descent (whereby we would find the ideal \(\mathbf{f}\) by subtracting a multiple of the negative gradient from \(\mathbf{f}\) and iterating with the new value).
+and evaluated at \(\mathbf{f} = \mathbf{f}_{m-1}\), in analogy to steepest descent (whereby we would
+find the ideal \(\mathbf{f}\) by subtracting a multiple of the negative gradient from
+\(\mathbf{f}\) and iterating with the new value).
 
 
-Recall that we find approximate solutions for the optimal \(R_j\) by greedy tree induction. In other words, we recursively partition the space of joint predictor variable values by splitting on a feature \(j\) at a point \(s\) and considering \[R_L(j, s) = \{ x_i | x_{ij} \leq s \} \text{ and } R_R (j, s) = \{ x_i | x_{ij} > s \}\] where the \(R_L(j,s)\) and \(R_R(j,s)\) are subsets of the points \(O\) at the current node. We choose each split by finding the feature \(j\) and split point \(s\) that minimizes the squared error loss against the negative gradient with the optimal \(\gamma_L\) and \(\gamma _R\) for each region:
+Recall that we find approximate solutions for the optimal \(R_j\) by greedy
+tree induction. In other words, we recursively partition the space of joint predictor
+variable values by splitting on a feature \(j\) at a point \(s\)
+and considering \[R_L(j, s) = \{ x_i | x_{ij} \leq s \}
+\text{ and } R_R (j, s) = \{ x_i | x_{ij} > s \}\]
+where the \(R_L(j,s)\) and \(R_R(j,s)\) are subsets of the points \(O\)
+at the current node.
+We choose each split by finding the feature \(j\) and
+split point \(s\) that minimizes the squared error loss against the negative gradient
+with the optimal \(\gamma_L\) and \(\gamma _R\) for each region:
 \[
-    \min_{j, s} [\min_{\gamma _L} \sum_{x_i \in R_L(j,s)} (g_i - \gamma_L)^2
-    + \min _{\gamma _R} \sum_{x_i \in R_R(j, s)} (g_i - \gamma _R)^2]
+    \min_{j, s} [\min_{\gamma _L} \sum_{x_i \in R_L(j,s)} (-g_i - \gamma_L)^2
+    + \min _{\gamma _R} \sum_{x_i \in R_R(j, s)} (-g_i - \gamma _R)^2]
 \]
-where \(g_i = \partial_{\mathbf{f} _i} L(y_i, \mathbf{f}_i) |_{\mathbf{f}_i = f_{m-1} (x_i)}\). Note that the optimal \(\gamma \) for each inner minimization is given by the mean of the \(g_i\) for \(x_i \in R(j,s)\):
+where \(g_i = \partial_{\mathbf{f} _i} L(y_i, \mathbf{f}_i) |_{\mathbf{f}_i = f_{m-1} (x_i)}\).
+Note that the optimal \(\gamma \) for each inner minimization is given by the mean
+of the \(-g_i\) for \(x_i \in R(j,s)\):
 \[
-    \arg \min _{\gamma }\sum_{x_i \in R(j,s)} (g_i - \gamma)^2
-    = \frac{1}{|R(j,s)|} \sum_{x_i \in R(j,s)} g_i.
+    \arg \min _{\gamma }\sum_{x_i \in R(j,s)} (-g_i - \gamma)^2
+    = \frac{1}{|R(j,s)|} \sum_{x_i \in R(j,s)} -g_i.
 \]
-Minimizing the above objective in \(j,s\) is equivalent to maximizing the variance gain at \(O\), defined as
+Minimizing the above objective in \(j,s\) is equivalent to maximizing the variance gain
+at \(O\),
+defined as
 \[
-    V_{O}(j,s) = \frac{1}{|O|} \left( \frac{(\sum_{x_i \in R_L(j,s)} g_i )^2}{|R_L(j,s)|}
-    + \frac{(\sum_{x_i \in R_R(j,s)} g_i)^2}{|R_R(j,s)|}\right).
+    V_{O}(j,s) = \frac{1}{|O|} \left( \frac{(\sum_{x_i \in R_L(j,s)} -g_i )^2}{|R_L(j,s)|}
+    + \frac{(\sum_{x_i \in R_R(j,s)} -g_i)^2}{|R_R(j,s)|}\right).
 \]
-Hence, we grow the tree \(T(x; \Theta _m)\) by choosing the split which maximizes the variance gain. 
+Hence, we grow the tree \(T(x; \Theta _m)\) by choosing the split which maximizes
+the variance gain. 
 
 
-LightGBM alters the traditional gradient boosting method by considering only the data instances with the largest gradient values, along with a random sample of the remaining data instances when splitting (\emph{Gradient-based One-Side Sampling}, or GOSS). This increases the efficiency of the method while still accurately estimating the variance gain.
+LightGBM alters the traditional gradient boosting method by considering
+only the data instances with the largest gradient values, along with
+a random sample of the remaining data instances
+when splitting (\emph{Gradient-based One-Side Sampling},
+or GOSS). This increases the efficiency of the method while still accurately
+estimating the variance gain.
 
 
-Concretely, we rank the data instances \(x_i\) at \(O\) in order of greatest absolute gradient values \(|g_i|\) to least, and keep the top \(a \times 100 \%\) data instances---which we assign to the instance subset \(A\)---and take a random sample of size \(b \times |A^c|\) from the remaining instances---which we assign to the instance subset \(B\). The variance gain at \(O\)  is then given by
+Concretely, we rank the data instances \(x_i\) at \(O\)
+in order of greatest absolute gradient values \(|g_i|\) to least, and keep
+the
+top \(a \times 100 \%\)
+data instances---which we assign to the instance subset \(A\)---and
+take a random sample of size \(b \times |A^c|\) from the remaining
+instances---which we assign to the instance subset \(B\). The variance gain
+at \(O\) 
+is then given by
 \[
     \widetilde{V}_O (j, s) = \frac{1}{|O|} 
-    \left( \frac{\left( \sum_{x_i \in A_L} g_i + \frac{1-a}{b} \sum_{x_i \in B_L} g_i \right)^2 }{|R_L(j,s)|}
-    + \frac{\left( \sum_{x_i \in A_R} g_i + \frac{1-a}{b} \sum_{x_i \in B_R} g_i \right)^2 }{|R_R(j,s)|}\right).
+    \left( \frac{\left( \sum_{x_i \in A_L} -g_i + \frac{1-a}{b} \sum_{x_i \in B_L} -g_i \right)^2 }{|R_L(j,s)|}
+    + \frac{\left( \sum_{x_i \in A_R} -g_i + \frac{1-a}{b} \sum_{x_i \in B_R} -g_i \right)^2 }{|R_R(j,s)|}\right).
 \]
-where \(A_L = R_L(j,s) \cap A\), \(A_R = R_R(j,s) \cap A\), \(B_L = R_L(j, s) \cap B\), and \(B_R = R_R(j,s) \cap B\).
+where \(A_L = R_L(j,s) \cap A\), \(A_R = R_R(j,s) \cap A\), \(B_L = R_L(j, s) \cap B\),
+and \(B_R = R_R(j,s) \cap B\).
 
 
-On the other hand, XGBoost alters the traditional gradient boosting method by using a second-order approximation of \(L\) in the minimization process. Ignoring regularization for simplicity, we have
+On the other hand, XGBoost alters the traditional gradient boosting method by using
+a second-order approximation of \(L\) in the minimization process. Ignoring
+regularization for simplicity, we have
 \[
     \sum_{i=1}^N
     L(y_i, f_{m-1} (x_i) + T(x_i; \Theta _m))
     \approx \sum_{i=1}^N \left[
     L(y_i, f_{m-1} (x_i)) + g_i T(x_i; \Theta _m) + \frac{1}{2} h_i T(x_i; \Theta _m)^2 \right]
 \]
-where \(h_i = \partial^2_{\mathbf{f} _i} L(y_i, \mathbf{f}_i) |_{\mathbf{f}_i = f_{m-1} (x_i)}\). Minimizing the above in \(\Theta _m\) is equivalent to minimizing the objective
+where \(h_i = \partial^2_{\mathbf{f} _i} L(y_i, \mathbf{f}_i) |_{\mathbf{f}_i = f_{m-1} (x_i)}\).
+Minimizing the above in \(\Theta _m\) is equivalent to minimizing the objective
 \[
     \sum_{i=1}^N \left[ g_i T(x_i; \Theta _m) + \frac{1}{2} h_i T(x_i ; \Theta _m)^2 \right] 
     = \sum_{j=1}^J \left[ \gamma _j \sum_{x_i \in R_j} g_i + \frac{1}{2} \gamma _j^2
     \sum_{x_i \in R_j} h_i  \right] 
 \] 
-as we have only removed the constant terms. For a fixed set of regions \(R_j\), the optimal weight \(\hat{\gamma _j}\) is given by
+as we have only removed the constant terms.
+For a fixed set of regions \(R_j\), the optimal weight \(\hat{\gamma _j}\) is given by
 \(
     \hat{\gamma_j} = - \frac{\sum_{x_i \in R_j} g_i}{\sum_{x_i \in R_j} h_i}
 \)
@@ -129,7 +189,11 @@ which gives the optimal objective value
 \[
     - \frac{1}{2} \sum_{j=1}^J \frac{\left( \sum_{x_i \in R_j} g_i \right)^2}{\sum_{x_i \in R_j} h_i}.
 \]
-In practice, it is impossible to enumerate all possible regions \(R_j\). Instead we find approximate solutions using greedy tree induction. The previous expression can be used as an impurity score to determine where to split. The information gain at \(\mathcal{O}\) is then given by
+In practice, it is impossible to enumerate all possible regions \(R_j\). Instead we find
+approximate solutions using greedy tree induction. 
+The previous expression can be used as an impurity score to determine where
+to split. The
+information gain at \(\mathcal{O}\) is then given by
 \[
     \frac{1}{2} \left[ \frac{\left( \sum_{x_i \in R_L} g_i \right)^2 }{\sum_{x_i \in R_L} h_i} 
     + \frac{\left( \sum_{x_i \in R_R} g_i \right)^2 }{\sum_{x_i \in R_R} h_i} 
@@ -138,15 +202,27 @@ In practice, it is impossible to enumerate all possible regions \(R_j\). Instead
 and we choose the split which maximizes the information gain.
 
 
-LightGBM and XGBoost also both make use of methods that improve computational efficiency by reducing the number of splits which are examined when determining the optimal feature and split point. LightGBM uses a histogram-based algorithm, which buckets feature values into bins and builds a histogram during the training process. Instead of considering every possible split point, we consider splits between bins. XGBoost originally used a different method of achieving this goal,
-weighted quantile sketching, but by default currently also uses a histogram-based algorithm.
+LightGBM and XGBoost also both make use of methods that improve
+computational efficiency by reducing the number of splits
+which are examined when determining the optimal feature and split point.
+LightGBM uses a histogram-based algorithm, which buckets feature values
+into bins and builds a histogram during the training process. Instead of
+considering every possible split point, we consider splits between bins.
+XGBoost originally used a different method of achieving this goal,
+weighted quantile sketching, but by default currently also
+uses a histogram-based algorithm.
 
 
-Additionally, we make use of the AdaBoost algorithm. The AdaBoost model is also an additive tree model. In contrast to gradient boosting models, AdaBoost reweights training samples between
-iterations so that misclassified samples are given more weight. AdaBoost can also be understood as forward stagewise modeling which minimizes the exponential loss
+Additionally, we make use of the AdaBoost algorithm. The AdaBoost model
+is also an additive tree model. In contrast to gradient boosting models,
+AdaBoost reweights training samples between
+iterations so that misclassified samples are given
+more weight. AdaBoost can also be understood as forward stagewise modeling which
+minimizes the exponential loss
 \(
     L(y, f(x)) = \exp (- y f(x)).
 \)
+
 
 
 \section{Experimental Results}
