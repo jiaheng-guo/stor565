@@ -1,6 +1,6 @@
 # STOR 565 (Fall 2025) Group 13 Final Project
 
-This repository contains the paper and codes for the final project of STOR 565 at UNC Chapel Hill. The project focuses on benchmarking classical and modern boosting algorithms on various datasets spanning regression and classification tasks. The final paper can be found at `./paper/main.pdf`.
+This repository contains the paper and codes for the final project of STOR 565 at UNC Chapel Hill. The project focuses on benchmarking classical and modern boosting algorithms on various datasets spanning regression and classification tasks. The final paper can be found at `./papers/main.pdf`.
 
 **Authors**: Tony Luo, Will Kim, Sichen Li, Shang Peng, Jiaheng Guo
 
